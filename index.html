@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c222c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Conciliación Negocios</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Conciliación Negocios","short_name":"Conciliación","display":"standalone","background_color":"#1c222c","theme_color":"#1c222c","start_url":"."}'>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#1c222c;--bg2:#212834;--card:#262e3b;--card2:#2c3544;--tx:#e7ebf2;--tx2:#c3cad6;--mu:#8e98aa;--ln:#363f4f;
+  --ok:#4ade80;--okb:rgba(74,222,128,.13);--bad:#f87171;--badb:rgba(248,113,113,.14);--war:#fbbf24;--warb:rgba(251,191,36,.14);
+  --blu:#7cb3ff;--blub:rgba(124,179,255,.14);--acc:#5b9cf6;--acc2:#3d7fe0;--r:14px;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv11" 1}
+header{position:sticky;top:0;z-index:5;background:rgba(28,34,44,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--ln);padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top))}
+header .row{display:flex;align-items:center;gap:10px;justify-content:space-between;max-width:1100px;margin:0 auto}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+header .sub{font-size:12.5px;color:var(--mu);margin-top:1px}
+button{font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 13px;transition:background .15s,border-color .15s}
+button:hover{background:var(--card2);border-color:#465063}
+button.pri{background:var(--acc);color:#0d1420;border-color:var(--acc);font-weight:600}
+button.pri:hover{background:#74acf8}
+button.ghost{background:transparent;color:var(--tx2);border-color:var(--ln)}
+button:disabled{opacity:.5}
+input,select,textarea{font:inherit;font-size:14px;border:1px solid var(--ln);border-radius:10px;padding:8px 10px;background:var(--bg2);color:var(--tx);min-width:0;outline:none}
+input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(91,156,246,.18)}
+main{max-width:1100px;margin:0 auto;padding:14px 16px 90px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.chip{border-radius:999px;padding:7px 14px;font-size:13.5px;color:var(--tx2)}
+.chip.on{background:var(--acc);color:#0d1420;border-color:var(--acc);font-weight:600}
+.range{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.range input{width:150px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--ln);margin:8px 0 16px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:10px 12px;white-space:nowrap;color:var(--mu);font-weight:500}
+nav.tabs button:hover{color:var(--tx2);background:none}
+nav.tabs button.on{color:var(--tx);border-bottom-color:var(--acc);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:var(--r);padding:14px}
+.card .k{font-size:12.5px;color:var(--mu);font-weight:500}
+.card .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+.card.total{background:linear-gradient(135deg,#2f5fa8,#3d7fe0);border-color:transparent}
+.card.total .k{color:#d6e5ff}.card.total .v{color:#fff}
+h2{font-size:13px;margin:22px 0 10px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--ln);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--ln);text-align:right;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+th{font-size:12px;color:var(--mu);font-weight:600;background:var(--bg2);position:sticky;top:0;letter-spacing:.02em}
+th:first-child,td:first-child{text-align:left}
+td{color:var(--tx2)}
+td b{color:var(--tx)}
+td.l{text-align:left}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--card2)}
+tfoot td{font-weight:700;background:var(--bg2);color:var(--tx);border-top:1px solid var(--ln);border-bottom:0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.war{color:var(--war)}
+td.ok,td.bad,td.war{font-weight:600}
+.pill{display:inline-block;font-size:11.5px;border-radius:999px;padding:2px 8px;font-weight:600;letter-spacing:.01em}
+.p-ok{background:var(--okb);color:var(--ok)}.p-bad{background:var(--badb);color:var(--bad)}.p-war{background:var(--warb);color:var(--war)}.p-blu{background:var(--blub);color:var(--blu)}
+.muted{color:var(--mu)}
+.note{font-size:12.5px;color:var(--mu);margin:8px 2px;line-height:1.5}
+.banner{padding:10px 14px;border-radius:12px;margin-bottom:12px;font-size:13.5px;border:1px solid transparent}
+.banner.w{background:var(--warb);color:var(--war);border-color:rgba(251,191,36,.25)}
+.banner.e{background:var(--badb);color:var(--bad);border-color:rgba(248,113,113,.25)}
+.list .it{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--ln);cursor:pointer}
+.list .it:hover{background:var(--card2)}
+.list .it:last-child{border-bottom:0}
+.list .it .a{font-weight:600}
+.list .it .b{font-size:12.5px;color:var(--mu);margin-top:2px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--mu);font-weight:500}
+#login{max-width:360px;margin:14vh auto;padding:0 16px}
+#login .card{display:flex;flex-direction:column;gap:12px;padding:22px}
+dialog{border:1px solid var(--ln);border-radius:16px;padding:0;width:min(580px,94vw);max-height:88vh;background:var(--card);color:var(--tx)}
+dialog::backdrop{background:rgba(8,12,18,.6)}
+dialog .hd{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--card)}
+dialog .bd{padding:14px 16px;overflow:auto}
+dialog .tw{background:var(--bg2)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.hide{display:none!important}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:var(--acc);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--acc)}
+@media (max-width:600px){body{font-size:14.5px}.card .v{font-size:19px}th,td{padding:9px 10px}
+  .grid{grid-template-columns:1fr 1fr}.card.total{grid-column:1/-1}
+  #s-resumen th,#s-resumen td{white-space:normal;font-size:13px}
+  .range input{width:calc(50% - 20px)}}
+@media print{
+  :root{color-scheme:light;--bg:#fff;--bg2:#f3f5f8;--card:#fff;--card2:#fff;--tx:#111;--tx2:#222;--mu:#555;--ln:#ddd;--ok:#15803d;--bad:#b91c1c;--war:#a16207;--blu:#1d4ed8}
+  header,nav.tabs,.filters,.actions,#btnLogout{display:none!important}
+  main{padding:0}.sec{display:block!important;break-inside:avoid}.tw{border:0;overflow:visible}
+  body{background:#fff;font-size:11px}.card.total{background:#eef3fb}.card.total .k,.card.total .v{color:#111}
+}
+</style>
+</head>
+<body>
+
+<div id="login" class="hide">
+  <div class="card">
+    <h1 style="margin:0;font-size:18px">Conciliación Negocios</h1>
+    <div class="muted" style="font-size:13px">Mismo usuario y contraseña de la bodega.</div>
+    <input id="lgEmail" type="text" placeholder="Usuario (ej: administrador)" autocomplete="username" autocapitalize="none" value="administrador">
+    <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <button class="pri" id="lgBtn">Ingresar</button>
+    <div id="lgErr" class="bad" style="font-size:13px"></div>
+  </div>
+</div>
+
+<div id="app" class="hide">
+<header>
+  <div class="row">
+    <div><h1>Conciliación Negocios</h1><div class="sub" id="hdrRange"></div></div>
+    <div class="actions">
+      <button class="ghost" id="btnReload" title="Actualizar">↻</button>
+      <button class="ghost" id="btnLogout">Salir</button>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="filters">
+    <button class="chip" data-p="ayer">Hasta ayer</button>
+    <button class="chip" data-p="mes">Este mes</button>
+    <button class="chip" data-p="mesant">Mes anterior</button>
+    <div class="range">
+      <input type="date" id="fDesde" min="2026-10-01">
+      <span class="muted">a</span>
+      <input type="date" id="fHasta" min="2026-10-01">
+      <button id="btnAplicar">Aplicar</button>
+    </div>
+  </div>
+  <div id="msg"></div>
+  <nav class="tabs" id="tabs">
+    <button data-t="resumen" class="on">Resumen</button>
+    <button data-t="bodega">Bodega</button>
+    <button data-t="asaditos">Asaditos</button>
+    <button data-t="maquinas">Máquinas</button>
+    <button data-t="corregir">A corregir <span id="cntCorr" class="pill p-bad"></span></button>
+    <button data-t="params">Parámetros</button>
+  </nav>
+
+  <section class="sec" id="s-resumen"></section>
+  <section class="sec hide" id="s-bodega"></section>
+  <section class="sec hide" id="s-asaditos"></section>
+  <section class="sec hide" id="s-maquinas"></section>
+  <section class="sec hide" id="s-corregir"></section>
+  <section class="sec hide" id="s-params"></section>
+
+  <div class="actions" style="margin-top:14px">
+    <button id="btnXlsx">Exportar Excel</button>
+    <button id="btnPdf">Exportar PDF</button>
+  </div>
+</main>
+</div>
+
+<dialog id="dlg">
+  <div class="hd"><b id="dlgTitle"></b><button id="dlgClose">✕</button></div>
+  <div class="bd" id="dlgBody"></div>
+</dialog>
+
+<script>
+const SUPABASE_URL = 'https://sdpysvowvwucjfnyosuf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcHlzdm93dnd1Y2pmbnlvc3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNjMxNjUsImV4cCI6MjA4NjgzOTE2NX0.-03XyWwC2X0V4Dp4dtCq5oxcvYInBMGRccZSAq5nDQ8';
+const MIN_FECHA = '2026-10-01';
+const CACHE_KEY = 'conc_cache_v1';
+const DEF_PARAMS = {margen_bodega:15, hugo:100000, mirna:110000, german:110000, tolerancia:1000};
+const NEG = {bodega:'Bodega', asaditos:'Asaditos', maquinas:'Máquinas'};
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const st = {dif:[], desde:null, hasta:null, preset:'ayer', rows:[], params:{...DEF_PARAMS}, notas:{}, tab:'resumen', calc:null, cached:false};
+
+/* ---------- utilidades ---------- */
+const n0 = v => Number(v) || 0;
+const gs = v => { if (v === null || v === undefined || v === '') return '–'; const n = Math.round(Number(v)); const s = Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (n < 0 ? '−' : '') + s; };
+const gsDif = v => { const n = Math.round(n0(v)); return n === 0 ? '0' : (n > 0 ? '+' : '') + gs(n); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function hoyPY(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+function addDays(iso, d){ const t = new Date(iso + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + d); return t.toISOString().slice(0,10); }
+const maxD = (a,b) => a > b ? a : b;
+const fmtDia = iso => { const [y,m,d] = iso.split('-'); const dw = ['dom','lun','mar','mié','jue','vie','sáb'][new Date(iso+'T12:00:00Z').getUTCDay()]; return `${dw} ${d}/${m}`; };
+
+function setPreset(p){
+  const hoy = hoyPY(), ayer = addDays(hoy,-1), mes = hoy.slice(0,8) + '01';
+  if (p === 'ayer'){ st.desde = MIN_FECHA; st.hasta = ayer; }
+  if (p === 'mes'){ st.desde = maxD(mes, MIN_FECHA); st.hasta = hoy; }
+  if (p === 'mesant'){ const fin = addDays(mes,-1); st.desde = maxD(fin.slice(0,8)+'01', MIN_FECHA); st.hasta = fin; }
+  if (st.hasta < st.desde) st.hasta = st.desde;
+  st.preset = p;
+}
+function msg(html, cls){ $('#msg').innerHTML = html ? `<div class="banner ${cls||'w'}">${html}</div>` : ''; }
+
+/* ---------- auth ---------- */
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) startApp(); else showLogin();
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') showLogin(); });
+}
+function showLogin(){ $('#app').classList.add('hide'); $('#login').classList.remove('hide'); }
+$('#lgBtn').onclick = async () => {
+  $('#lgErr').textContent = ''; $('#lgBtn').disabled = true;
+  let u = $('#lgEmail').value.trim().toLowerCase();
+  if (u && !u.includes('@')) u += '@guaripola.local';
+  const { error } = await sb.auth.signInWithPassword({ email: u, password: $('#lgPass').value });
+  $('#lgBtn').disabled = false;
+  if (error) { $('#lgErr').textContent = 'No se pudo ingresar: ' + error.message; return; }
+  startApp();
+};
+$('#lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
+$('#btnLogout').onclick = async () => { await sb.auth.signOut(); };
+
+async function startApp(){
+  $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+  setPreset('ayer');
+  await loadConfig();
+  await load();
+}
+
+/* ---------- datos ---------- */
+async function loadConfig(){
+  const { data, error } = await sb.from('conc_config').select('params,notas').eq('id',1).maybeSingle();
+  if (!error && data){ st.params = {...DEF_PARAMS, ...(data.params||{})}; st.notas = data.notas || {}; }
+}
+async function saveConfig(){
+  const { error } = await sb.from('conc_config').upsert({ id:1, params: st.params, notas: st.notas, updated_at: new Date().toISOString() });
+  if (error) alert('No se pudo guardar: ' + error.message);
+  return !error;
+}
+async function load(){
+  syncFilters();
+  $('#btnReload').innerHTML = '<span class="spin"></span>';
+  msg('');
+  const [{ data, error }, rd] = await Promise.all([
+    sb.rpc('conc_diario', { p_desde: st.desde, p_hasta: st.hasta }),
+    sb.rpc('conc_diferidos', { p_desde: st.desde, p_hasta: st.hasta })
+  ]);
+  $('#btnReload').textContent = '↻';
+  if (error){
+    const c = readCache();
+    if (c && c.desde === st.desde && c.hasta === st.hasta){
+      st.rows = c.rows; st.dif = c.dif || []; st.cached = true;
+      msg(`Sin conexión o error (${esc(error.message)}). Mostrando datos guardados del ${new Date(c.ts).toLocaleString('es-PY')}.`);
+    } else if (c){
+      st.desde = c.desde; st.hasta = c.hasta; st.rows = c.rows; st.dif = c.dif || []; st.cached = true; syncFilters();
+      msg(`Sin conexión o error (${esc(error.message)}). Mostrando el último resultado guardado (${c.desde} a ${c.hasta}).`);
+    } else {
+      st.rows = []; msg('Error al cargar: ' + esc(error.message), 'e');
+    }
+  } else {
+    st.rows = data || []; st.dif = rd.error ? [] : (rd.data || []); st.cached = false;
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({desde:st.desde, hasta:st.hasta, rows:st.rows, dif:st.dif, ts:Date.now()})); } catch(e){}
+  }
+  compute(); render();
+}
+function readCache(){ try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch(e){ return null; } }
+
+/* ---------- cálculo ---------- */
+function compute(){
+  const tol = n0(st.params.tolerancia);
+  const by = {bodega:[], asaditos:[], maquinas:[]};
+  for (const r of st.rows){
+    const o = {...r};
+    o.sis = r.negocio === 'maquinas' ? null : n0(r.sis_ef) + n0(r.sis_banco);
+    const bod = r.negocio === 'bodega';
+    o.cf_banco_tot = n0(r.cf_banco) + (bod ? n0(r.cf_dif) : 0);   // bodega: acreditado + diferencia Bancard
+    o.cf = n0(r.cf_ef) + o.cf_banco_tot + (r.negocio === 'maquinas' ? n0(r.cf_dif) : 0);
+    o.mis = n0(r.cf_ef) + n0(r.cf_banco);
+    o.d_ef = n0(r.cf_ef) - n0(r.sis_ef);
+    o.d_banco = o.cf_banco_tot - n0(r.sis_banco);
+    o.d = r.negocio === 'maquinas' ? 0 : (bod ? o.d_ef : o.cf - o.sis);   // bodega: estado solo por efectivo
+    o.key = r.negocio + '|' + r.dia;
+    by[r.negocio]?.push(o);
+  }
+  // estado + fecha corrida
+  for (const neg of ['bodega','asaditos']){
+    const L = by[neg];
+    for (const o of L) o.estado = Math.abs(o.d) <= tol ? 'ok' : (o.d < 0 ? 'falta' : 'sobra');
+    for (let i = 0; i < L.length - 1; i++){
+      const a = L[i], b = L[i+1];
+      if (Math.abs(a.d) > tol && Math.abs(b.d) > tol && Math.abs(a.d + b.d) <= tol && Math.sign(a.d) !== Math.sign(b.d)){
+        a.corrida = b.dia; b.corrida = a.dia;
+      }
+    }
+  }
+  // asaditos: % ganancia promedio de días completos
+  const comp = by.asaditos.filter(o => o.trabajado && !o.sin_productos && n0(o.ref_ventas) > 0);
+  const sv = comp.reduce((s,o)=>s+n0(o.ref_ventas),0), sg = comp.reduce((s,o)=>s+n0(o.ganancia),0);
+  const pct = sv > 0 ? sg / sv : 0;
+  for (const o of by.asaditos){
+    o.gan_final = o.sin_productos ? Math.round(n0(o.sis) * pct) : n0(o.ganancia);
+    o.gan_est = !!o.sin_productos;
+  }
+  const P = st.params;
+  const sum = (L,f) => L.reduce((s,o)=>s+n0(typeof f === 'function' ? f(o) : o[f]),0);
+  const bod = { cf: sum(by.bodega,'cf'), sis: sum(by.bodega,'sis'), dias: by.bodega.filter(o=>o.trabajado).length,
+    sis_ef: sum(by.bodega,'sis_ef'), sis_banco: sum(by.bodega,'sis_banco'), cf_ef: sum(by.bodega,'cf_ef'), cf_banco: sum(by.bodega,'cf_banco_tot'),
+    acred: sum(by.bodega,'cf_banco'), dif_bancard: sum(by.bodega,'cf_dif'), ventas: sum(by.bodega,'ref_ventas') };
+  bod.margen = bod.cf * n0(P.margen_bodega) / 100; bod.personal = n0(P.hugo) * bod.dias; bod.res = bod.margen - bod.personal;
+  const asa = { cf: sum(by.asaditos,'cf'), sis: sum(by.asaditos,'sis'), dias: by.asaditos.filter(o=>o.trabajado).length,
+    sis_ef: sum(by.asaditos,'sis_ef'), sis_banco: sum(by.asaditos,'sis_banco'), cf_ef: sum(by.asaditos,'cf_ef'), cf_banco: sum(by.asaditos,'cf_banco'),
+    sis_dif: sum(by.asaditos,'sis_dif'), cf_dif: sum(by.asaditos,'cf_dif'),
+    gan_real: sum(by.asaditos.filter(o=>!o.gan_est),'gan_final'), gan_est: sum(by.asaditos.filter(o=>o.gan_est),'gan_final'),
+    dias_est: by.asaditos.filter(o=>o.gan_est).length, pct };
+  asa.gan = asa.gan_real + asa.gan_est; asa.personal = (n0(P.mirna) + n0(P.german)) * asa.dias; asa.res = asa.gan - asa.personal;
+  const maq = { cf: sum(by.maquinas,'cf'), mis: sum(by.maquinas,'mis'), otras: sum(by.maquinas,'cf_dif'), dias: by.maquinas.length }; maq.res = maq.cf;
+  const corregir = [...by.bodega, ...by.asaditos].filter(o => o.estado !== 'ok').sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+  st.calc = { by, bod, asa, maq, corregir, total: bod.res + asa.res + maq.res, ingTotal: bod.cf + asa.cf + n0(asa.cf_dif) + maq.cf };
+}
+
+/* ---------- render ---------- */
+function syncFilters(){
+  $('#fDesde').value = st.desde; $('#fHasta').value = st.hasta;
+  document.querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.p === st.preset));
+  $('#hdrRange').textContent = `${st.desde.split('-').reverse().join('/')} al ${st.hasta.split('-').reverse().join('/')}`;
+}
+function card(k,v,cls){ return `<div class="card ${cls||''}"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+function difCell(v, neutral){ const t = n0(st.params.tolerancia), n = n0(v); const c = Math.abs(n) <= t ? 'ok' : (neutral ? 'muted' : n < 0 ? 'bad' : 'war'); return `<td class="${c}">${Math.abs(n) <= t ? '✓' : gsDif(n)}</td>`; }
+function estadoPill(o){
+  const nota = st.notas[o.key];
+  let s = o.estado === 'ok' ? '<span class="pill p-ok">OK</span>' : o.estado === 'falta' ? '<span class="pill p-bad">Falta en CF</span>' : '<span class="pill p-war">Sobra en CF</span>';
+  if (o.corrida) s += ` <span class="pill p-blu">Fecha corrida ↔ ${o.corrida.slice(8)}</span>`;
+  if (nota?.ok) s += ' <span class="pill p-ok">Revisado</span>';
+  else if (nota?.nota) s += ' <span class="pill p-blu">Nota</span>';
+  return s;
+}
+
+function render(){
+  const C = st.calc; if (!C) return;
+  $('#cntCorr').textContent = C.corregir.filter(o => !st.notas[o.key]?.ok).length || '';
+  renderResumen(C); renderBodega(C); renderAsaditos(C); renderMaquinas(C); renderCorregir(C); renderParams();
+  showTab(st.tab);
+}
+
+function renderResumen(C){
+  const {bod, asa, maq} = C, P = st.params;
+  $('#s-resumen').innerHTML = `
+  <h2>Ingresos Centro Financiero</h2>
+  <div class="grid">
+    ${card('Bodega', gs(bod.cf))}
+    ${card('Asaditos (ef + tarjeta + transf)', gs(asa.cf))}
+    ${card('Asaditos PYa / Monchis', gs(asa.cf_dif))}
+    ${card('Máquinas (mis ' + gs(maq.mis) + ' + otras ' + gs(maq.otras) + ')', gs(maq.cf))}
+    ${card('Total ingresos CF', gs(C.ingTotal), 'total')}
+  </div>
+  <h2>Resultado estimado</h2>
+  <div class="grid">
+    ${card('Bodega', `<span class="${bod.res<0?'bad':''}">${gs(bod.res)}</span>`)}
+    ${card('Asaditos', `<span class="${asa.res<0?'bad':''}">${gs(asa.res)}</span>`)}
+    ${card('Máquinas', gs(maq.res))}
+    ${card('Resultado total', gs(C.total), 'total')}
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Negocio</th><th>Base</th><th>Días</th><th>Personal</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>Bodega</td><td>${gs(bod.cf)} × ${P.margen_bodega}% = ${gs(bod.margen)}</td><td>${bod.dias}</td><td>Hugo ${gs(P.hugo)} × ${bod.dias} = ${gs(bod.personal)}</td><td class="${bod.res<0?'bad':''}"><b>${gs(bod.res)}</b></td></tr>
+      <tr><td>Asaditos</td><td>Ganancia ${gs(asa.gan)}${asa.dias_est ? ` <span class="pill p-war">${asa.dias_est} día(s) estimado(s)</span>` : ''}</td><td>${asa.dias}</td><td>(Mirna ${gs(P.mirna)} + Germán ${gs(P.german)}) × ${asa.dias} = ${gs(asa.personal)}</td><td class="${asa.res<0?'bad':''}"><b>${gs(asa.res)}</b></td></tr>
+      <tr><td>Máquinas</td><td>Mis ${gs(maq.mis)} + otras ${gs(maq.otras)}</td><td>${maq.dias}</td><td>–</td><td><b>${gs(maq.res)}</b></td></tr>
+    </tbody>
+    <tfoot><tr><td>Total</td><td></td><td></td><td></td><td class="${C.total<0?'bad':''}">${gs(C.total)}</td></tr></tfoot>
+  </table></div>
+  ${asa.dias_est ? `<div class="note">Días de asaditos sin productos cargados: ganancia estimada = entrada real × ${(asa.pct*100).toFixed(1)}% (promedio de los días completos del período).</div>` : ''}
+
+  <h2>Control Sistema vs Centro Financiero</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Negocio</th><th>Sistema</th><th>CF</th><th>Diferencia</th></tr></thead>
+    <tbody>
+      <tr><td>Bodega · efectivo real</td><td>${gs(bod.sis_ef)}</td><td>${gs(bod.cf_ef)}</td>${difCell(bod.cf_ef-bod.sis_ef)}</tr>
+      <tr><td>Bodega · tarjeta/QR/transf (ver pendientes)</td><td>${gs(bod.sis_banco)}</td><td>${gs(bod.cf_banco)}</td>${difCell(bod.cf_banco-bod.sis_banco, true)}</tr>
+      <tr><td>Asaditos · efectivo</td><td>${gs(asa.sis_ef)}</td><td>${gs(asa.cf_ef)}</td>${difCell(asa.cf_ef-asa.sis_ef)}</tr>
+      <tr><td>Asaditos · tarjeta + transf</td><td>${gs(asa.sis_banco)}</td><td>${gs(asa.cf_banco)}</td>${difCell(asa.cf_banco-asa.sis_banco)}</tr>
+    </tbody>
+  </table></div>
+  <div class="note">Referencia ventas POS bodega: ${gs(bod.ventas)}.</div>
+
+  <h2>Pendientes</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Concepto</th><th>Sistema</th><th>CF</th><th>Pendiente</th></tr></thead>
+    <tbody>
+      <tr><td>Asaditos · PYa + Monchis (vendido vs cobrado)</td><td>${gs(asa.sis_dif)}</td><td>${gs(asa.cf_dif)}</td><td class="${asa.sis_dif-asa.cf_dif>0?'war':''}">${gs(asa.sis_dif-asa.cf_dif)}</td></tr>
+      <tr><td>Bodega · tarjeta cobrada POS vs acreditada ${gs(bod.acred)} + dif. Bancard ${gs(bod.dif_bancard)}</td><td>${gs(bod.sis_banco)}</td><td>${gs(bod.cf_banco)}</td><td class="${bod.sis_banco-bod.cf_banco>0?'war':''}">${gs(bod.sis_banco-bod.cf_banco)}</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">PYa/Monchis y Bancard se acreditan días después: parte del pendiente puede entrar en el período siguiente.</div>`;
+}
+
+function rowsTable(L, neg){
+  if (!L.length) return '<div class="card muted">Sin datos en el período.</div>';
+  const asa = neg === 'asaditos';
+  const sum = f => L.reduce((s,o)=>s+n0(o[f]),0);
+  return `<div class="tw"><table>
+  <thead><tr><th>Día</th><th>Sist. Ef</th><th>CF Ef</th><th>Dif</th><th>Sist. Banco</th><th>CF Banco</th><th>Dif</th><th>Dif total</th>
+  ${asa ? '<th>PYa+Mon sist.</th><th>PYa+Mon CF</th><th>Ganancia</th>' : '<th>Ventas POS</th>'}<th style="text-align:left">Estado</th></tr></thead>
+  <tbody>${L.map(o => `<tr class="click" data-key="${o.key}">
+    <td>${fmtDia(o.dia)}</td><td>${gs(o.sis_ef)}</td><td>${gs(o.cf_ef)}</td>${difCell(o.d_ef)}
+    <td>${gs(o.sis_banco)}</td><td>${gs(o.cf_banco_tot)}</td>${difCell(o.d_banco, neg === 'bodega')}${difCell(o.d)}
+    ${asa ? `<td>${gs(o.sis_dif)}</td><td>${gs(o.cf_dif)}</td><td>${gs(o.gan_final)}${o.gan_est ? ' <span class="pill p-war">est.</span>' : ''}</td>` : `<td>${gs(o.ref_ventas)}</td>`}
+    <td class="l">${estadoPill(o)}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td>Total</td><td>${gs(sum('sis_ef'))}</td><td>${gs(sum('cf_ef'))}</td>${difCell(sum('d_ef'))}<td>${gs(sum('sis_banco'))}</td><td>${gs(sum('cf_banco_tot'))}</td>${difCell(sum('d_banco'), neg === 'bodega')}${difCell(sum('d'))}
+  ${asa ? `<td>${gs(sum('sis_dif'))}</td><td>${gs(sum('cf_dif'))}</td><td>${gs(sum('gan_final'))}</td>` : `<td>${gs(sum('ref_ventas'))}</td>`}<td></td></tr></tfoot>
+  </table></div>`;
+}
+function renderBodega(C){
+  $('#s-bodega').innerHTML = `<h2>Bodega · Sistema (caja) vs CF</h2>${rowsTable(C.by.bodega,'bodega')}
+  <div class="note">Efectivo real = contado − sencillo que abre la caja siguiente + gastos varios − ingresos varios (caja abierta no cuenta). Banco = QR + transferencia + débito + crédito; en CF = acreditado + diferencia Bancard. El estado del día se marca solo por efectivo: la diferencia de banco es Bancard pendiente (ver Resumen). Tocá un día para ver el detalle del CF.</div>`;
+}
+function renderAsaditos(C){
+  $('#s-asaditos').innerHTML = `<h2>Asaditos · Sistema vs CF</h2>${rowsTable(C.by.asaditos,'asaditos')}
+  <div class="note">Entrada real = efectivo − sencillo + POS + transferencias. PYa y Monchis van aparte (se cobran después). Ganancia = Σ vendido × (precio − costo).</div>
+  <h2>Pedidos Ya y Monchis · fechas de venta y de cobro</h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">${['Pedidos Ya','Monchis'].map(difTable).join('')}</div>
+  <div class="note">Vendido = cargado en el sistema de asaditos ese día. Cobrado = ingreso registrado en el CF. Pendiente = vendido − cobrado en el período.</div>`;
+}
+function difTable(canal){
+  const L = (st.dif || []).filter(x => x.canal === canal);
+  const dias = [...new Set(L.map(x => x.dia))].sort();
+  const sv = L.filter(x=>x.origen==='sistema').reduce((s,x)=>s+n0(x.monto),0);
+  const sc = L.filter(x=>x.origen==='cf').reduce((s,x)=>s+n0(x.monto),0);
+  const body = dias.map(d => {
+    const v = L.filter(x=>x.dia===d && x.origen==='sistema').reduce((s,x)=>s+n0(x.monto),0);
+    const c = L.filter(x=>x.dia===d && x.origen==='cf');
+    const cs = c.reduce((s,x)=>s+n0(x.monto),0);
+    return `<tr><td>${fmtDia(d)}</td><td>${v ? gs(v) : '<span class="muted">–</span>'}</td><td class="${cs?'ok':''}">${cs ? gs(cs) : '<span class="muted">–</span>'}</td></tr>`;
+  }).join('');
+  const pend = sv - sc;
+  return `<div class="tw"><table>
+    <thead><tr><th>${canal}</th><th>Vendido (sistema)</th><th>Cobrado (CF)</th></tr></thead>
+    <tbody>${body || '<tr><td colspan="3" class="muted" style="text-align:left">Sin movimientos en el período.</td></tr>'}</tbody>
+    <tfoot><tr><td>Total</td><td>${gs(sv)}</td><td>${gs(sc)}</td></tr>
+    <tr><td>Pendiente</td><td colspan="2" class="${pend>0?'war':pend<0?'ok':''}">${pend>0 ? gs(pend) + ' por cobrar' : pend<0 ? gs(-pend) + ' cobrado de antes' : 'Al día'}</td></tr></tfoot>
+  </table></div>`;
+}
+function renderMaquinas(C){
+  const L = C.by.maquinas;
+  $('#s-maquinas').innerHTML = `<h2>Máquinas (CF)</h2>` + (L.length ? `<div class="tw"><table>
+    <thead><tr><th>Día</th><th>Mis máquinas</th><th>Otras máquinas</th><th>Total</th></tr></thead>
+    <tbody>${L.map(o=>`<tr class="click" data-key="${o.key}"><td>${fmtDia(o.dia)}</td><td>${gs(o.mis||null)}</td><td>${gs(o.cf_dif)}</td><td><b>${gs(o.cf)}</b></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td>${gs(C.maq.mis)}</td><td>${gs(C.maq.otras)}</td><td>${gs(C.maq.cf)}</td></tr></tfoot></table></div>
+    <div class="note">Ingresos de tragamonedas en el CF, separados por contraparte: "Mis maquinas" y "Otras maquinas".</div>` : '<div class="card muted">Sin conteos en el período.</div>');
+}
+function renderCorregir(C){
+  const L = C.corregir;
+  $('#s-corregir').innerHTML = `<h2>A corregir en Centro Financiero</h2>` + (L.length ? `<div class="card list" style="padding:0">${L.map(o => `
+    <div class="it" data-key="${o.key}">
+      <div><div class="a">${NEG[o.negocio]} · ${fmtDia(o.dia)}</div>
+      <div class="b">Sistema ${gs(o.sis)} · CF ${gs(o.cf)} · Ef ${gsDif(o.d_ef)} · Banco ${gsDif(o.d_banco)}${st.notas[o.key]?.nota ? ' · ' + esc(st.notas[o.key].nota) : ''}</div></div>
+      <div style="text-align:right"><div class="${o.d<0?'bad':'war'}" style="font-weight:700">${gsDif(o.d)}</div><div>${estadoPill(o)}</div></div>
+    </div>`).join('')}</div>` : '<div class="card ok">Todo coincide dentro de la tolerancia.</div>');
+}
+function renderParams(){
+  const P = st.params;
+  const f = (k,l,s) => `<label>${l}<input type="number" step="${s||1}" data-k="${k}" value="${P[k]}"></label>`;
+  $('#s-params').innerHTML = `<h2>Parámetros</h2><div class="card"><div class="form">
+    ${f('margen_bodega','Margen bodega (%)','0.1')}${f('hugo','Hugo por día (bodega)')}${f('mirna','Mirna por día (asaditos)')}${f('german','Germán por día (asaditos)')}${f('tolerancia','Tolerancia de diferencia (Gs.)')}
+  </div><div class="actions" style="margin-top:12px"><button class="pri" id="btnSaveP">Guardar</button></div></div>`;
+  $('#btnSaveP').onclick = async () => {
+    document.querySelectorAll('#s-params input[data-k]').forEach(i => st.params[i.dataset.k] = Number(i.value) || 0);
+    if (await saveConfig()){ compute(); render(); msg('Parámetros guardados.'); setTimeout(()=>msg(''),2500); }
+  };
+}
+
+function showTab(t){
+  st.tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('.sec').forEach(s => s.classList.toggle('hide', s.id !== 's-' + t));
+}
+
+/* ---------- detalle día ---------- */
+async function openDay(key){
+  const all = [...st.calc.by.bodega, ...st.calc.by.asaditos, ...st.calc.by.maquinas];
+  const o = all.find(x => x.key === key); if (!o) return;
+  $('#dlgTitle').textContent = `${NEG[o.negocio]} · ${fmtDia(o.dia)}`;
+  const nota = st.notas[key] || {};
+  const resumen = o.negocio === 'maquinas' ? '' : `<div class="grid">
+    ${card('Sistema', gs(o.sis))}${card('Centro Financiero', gs(o.cf))}${card('Diferencia', `<span class="${o.estado==='ok'?'ok':o.d<0?'bad':'war'}">${gsDif(o.d)}</span>`)}</div>
+    ${o.corrida ? `<div class="banner w">Probable carga con fecha corrida: se compensa con el día ${o.corrida.split('-').reverse().join('/')}.</div>` : ''}`;
+  $('#dlgBody').innerHTML = resumen + '<h2 style="margin-top:4px">Movimientos en CF</h2><div id="dlgTx" class="muted">Cargando…</div>' + `
+    <h2>Revisión</h2>
+    <textarea id="nTxt" rows="2" style="width:100%" placeholder="Nota (qué se corrigió, por qué)">${esc(nota.nota||'')}</textarea>
+    <label style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="nOk" ${nota.ok?'checked':''}> Revisado / corregido</label>
+    <button class="pri" id="nSave">Guardar nota</button>`;
+  $('#dlg').showModal();
+  $('#nSave').onclick = async () => {
+    const t = $('#nTxt').value.trim(), ok = $('#nOk').checked;
+    if (!t && !ok) delete st.notas[key]; else st.notas[key] = { nota:t, ok, ts:new Date().toISOString() };
+    if (await saveConfig()){ $('#dlg').close(); render(); }
+  };
+  const { data, error } = await sb.rpc('conc_cf_detalle', { p_dia: o.dia, p_negocio: o.negocio });
+  const box = $('#dlgTx'); if (!box) return;
+  if (error){ box.innerHTML = `<span class="bad">${esc(error.message)}</span>`; return; }
+  if (!data?.length){ box.textContent = 'No hay ingresos cargados ese día en el CF.'; return; }
+  box.classList.remove('muted');
+  box.innerHTML = `<div class="tw"><table><thead><tr><th>Hora</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Concepto</th><th>Monto</th></tr></thead><tbody>
+    ${data.map(x => `<tr><td>${esc((x.fecha||'').slice(11,16))}</td><td class="l">${esc(x.cuenta)}</td><td class="l">${esc(x.descripcion || x.categoria)}</td><td>${gs(x.monto)}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td></td><td></td><td class="l">Total</td><td>${gs(data.reduce((s,x)=>s+n0(x.monto),0))}</td></tr></tfoot></table></div>`;
+}
+
+/* ---------- export ---------- */
+function exportXlsx(){
+  const C = st.calc; if (!C) return;
+  const wb = XLSX.utils.book_new();
+  const res = [
+    ['Conciliación Negocios', `${st.desde} a ${st.hasta}`], [],
+    ['Ingresos CF','Monto'], ['Bodega',C.bod.cf], ['Asaditos (ef+tarjeta+transf)',C.asa.cf], ['Asaditos PYa/Monchis',C.asa.cf_dif], ['Máquinas · mis',C.maq.mis], ['Máquinas · otras',C.maq.otras], ['Total',C.ingTotal], [],
+    ['Resultado estimado','Base','Días','Personal','Resultado'],
+    ['Bodega', Math.round(C.bod.margen), C.bod.dias, C.bod.personal, Math.round(C.bod.res)],
+    ['Asaditos', C.asa.gan, C.asa.dias, C.asa.personal, C.asa.res],
+    ['Máquinas', C.maq.cf, C.maq.dias, 0, C.maq.res],
+    ['Total','','','', Math.round(C.total)], [],
+    ['Pendientes','Sistema','CF','Pendiente'],
+    ['Asaditos PYa+Monchis', C.asa.sis_dif, C.asa.cf_dif, C.asa.sis_dif - C.asa.cf_dif],
+    ['Bodega tarjeta (Bancard)', C.bod.sis_banco, C.bod.cf_banco, C.bod.sis_banco - C.bod.cf_banco],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res), 'Resumen');
+  const diario = [['Negocio','Día','Sist. Ef','CF Ef','Dif Ef','Sist. Banco','CF Banco','Dif Banco','Dif total','PYa+Mon sist.','PYa+Mon CF','Ventas ref.','Ganancia','Ganancia estimada','Estado','Fecha corrida','Nota','Revisado']];
+  for (const o of [...C.by.bodega, ...C.by.asaditos, ...C.by.maquinas]){
+    const nt = st.notas[o.key] || {};
+    diario.push([NEG[o.negocio], o.dia, n0(o.sis_ef), n0(o.cf_ef), o.d_ef, n0(o.sis_banco), n0(o.cf_banco), o.d_banco, o.d, n0(o.sis_dif), n0(o.cf_dif), n0(o.ref_ventas),
+      o.negocio === 'asaditos' ? o.gan_final : '', o.gan_est ? 'sí' : '', o.estado || '', o.corrida || '', nt.nota || '', nt.ok ? 'sí' : '']);
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(diario), 'Diario');
+  XLSX.writeFile(wb, `conciliacion_${st.desde}_${st.hasta}.xlsx`);
+}
+
+/* ---------- eventos ---------- */
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => { setPreset(b.dataset.p); load(); });
+$('#btnAplicar').onclick = () => {
+  let d = $('#fDesde').value, h = $('#fHasta').value;
+  if (!d || !h) return;
+  d = maxD(d, MIN_FECHA); if (h < d) h = d;
+  st.desde = d; st.hasta = h; st.preset = ''; load();
+};
+$('#btnReload').onclick = () => load();
+$('#tabs').onclick = e => { const b = e.target.closest('button[data-t]'); if (b) showTab(b.dataset.t); };
+document.addEventListener('click', e => { const r = e.target.closest('[data-key]'); if (r && !e.target.closest('dialog')) openDay(r.dataset.key); });
+$('#dlgClose').onclick = () => $('#dlg').close();
+$('#btnXlsx').onclick = exportXlsx;
+$('#btnPdf').onclick = () => window.print();
+
+init();
+</script>
+</body>
+</html>
