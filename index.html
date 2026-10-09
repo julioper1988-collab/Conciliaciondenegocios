@@ -305,7 +305,7 @@ function compute(){
   const bod = { cf: sum(by.bodega,'cf'), sis: sum(by.bodega,'sis'), dias: by.bodega.filter(o=>o.trabajado).length,
     sis_ef: sum(by.bodega,'sis_ef'), sis_banco: sum(by.bodega,'sis_banco'), cf_ef: sum(by.bodega,'cf_ef'), cf_banco: sum(by.bodega,'cf_banco_tot'),
     acred: sum(by.bodega,'cf_banco'), dif_bancard: sum(by.bodega,'cf_dif'), ventas: sum(by.bodega,'ref_ventas') };
-  bod.margen = bod.cf * n0(P.margen_bodega) / 100; bod.personal = n0(P.hugo) * bod.dias; bod.res = bod.margen - bod.personal;
+  bod.margen = bod.ventas * n0(P.margen_bodega) / 100; bod.personal = n0(P.hugo) * bod.dias; bod.res = bod.margen - bod.personal;
   const asa = { cf: sum(by.asaditos,'cf'), sis: sum(by.asaditos,'sis'), dias: by.asaditos.filter(o=>o.trabajado).length,
     sis_ef: sum(by.asaditos,'sis_ef'), sis_banco: sum(by.asaditos,'sis_banco'), cf_ef: sum(by.asaditos,'cf_ef'), cf_banco: sum(by.asaditos,'cf_banco'),
     sis_dif: sum(by.asaditos,'sis_dif'), cf_dif: sum(by.asaditos,'cf_dif'),
@@ -362,7 +362,7 @@ function renderResumen(C){
   <div class="tw"><table>
     <thead><tr><th>Negocio</th><th>Base</th><th>Días</th><th>Personal</th><th>Resultado</th></tr></thead>
     <tbody>
-      <tr><td>Bodega</td><td>${gs(bod.cf)} × ${P.margen_bodega}% = ${gs(bod.margen)}</td><td>${bod.dias}</td><td>Hugo ${gs(P.hugo)} × ${bod.dias} = ${gs(bod.personal)}</td><td class="${bod.res<0?'bad':''}"><b>${gs(bod.res)}</b></td></tr>
+      <tr><td>Bodega</td><td>Ventas POS sin fiado ${gs(bod.ventas)} × ${P.margen_bodega}% = ${gs(bod.margen)}</td><td>${bod.dias}</td><td>Hugo ${gs(P.hugo)} × ${bod.dias} = ${gs(bod.personal)}</td><td class="${bod.res<0?'bad':''}"><b>${gs(bod.res)}</b></td></tr>
       <tr><td>Asaditos</td><td>Ganancia ${gs(asa.gan)}${asa.dias_est ? ` <span class="pill p-war">${asa.dias_est} día(s) estimado(s)</span>` : ''}</td><td>${asa.dias}</td><td>(Mirna ${gs(P.mirna)} + Germán ${gs(P.german)}) × ${asa.dias} = ${gs(asa.personal)}</td><td class="${asa.res<0?'bad':''}"><b>${gs(asa.res)}</b></td></tr>
       <tr><td>Máquinas</td><td>Mis ${gs(maq.mis)} + otras ${gs(maq.otras)}</td><td>${maq.dias}</td><td>–</td><td><b>${gs(maq.res)}</b></td></tr>
     </tbody>
@@ -380,7 +380,7 @@ function renderResumen(C){
       <tr><td>Asaditos · tarjeta + transf</td><td>${gs(asa.sis_banco)}</td><td>${gs(asa.cf_banco)}</td>${difCell(asa.cf_banco-asa.sis_banco)}</tr>
     </tbody>
   </table></div>
-  <div class="note">Referencia ventas POS bodega: ${gs(bod.ventas)}.</div>
+  <div class="note">Margen de bodega calculado sobre ventas POS sin fiado (${gs(bod.ventas)}), por día de caja.</div>
 
   <h2>Pendientes</h2>
   <div class="tw"><table>
@@ -399,7 +399,7 @@ function rowsTable(L, neg){
   const sum = f => L.reduce((s,o)=>s+n0(o[f]),0);
   return `<div class="tw"><table>
   <thead><tr><th>Día</th><th>Sist. Ef</th><th>CF Ef</th><th>Dif</th><th>Sist. Banco</th><th>CF Banco</th><th>Dif</th><th>Dif total</th>
-  ${asa ? '<th>PYa+Mon sist.</th><th>PYa+Mon CF</th><th>Ganancia</th>' : '<th>Ventas POS</th>'}<th style="text-align:left">Estado</th></tr></thead>
+  ${asa ? '<th>PYa+Mon sist.</th><th>PYa+Mon CF</th><th>Ganancia</th>' : '<th>Ventas POS (sin fiado)</th>'}<th style="text-align:left">Estado</th></tr></thead>
   <tbody>${L.map(o => `<tr class="click" data-key="${o.key}">
     <td>${fmtDia(o.dia)}</td><td>${gs(o.sis_ef)}</td><td>${gs(o.cf_ef)}</td>${difCell(o.d_ef)}
     <td>${gs(o.sis_banco)}</td><td>${gs(o.cf_banco_tot)}</td>${difCell(o.d_banco, neg === 'bodega')}${difCell(o.d)}
