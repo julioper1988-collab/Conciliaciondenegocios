@@ -483,12 +483,13 @@ async function openDay(key){
   const resumen = o.negocio === 'maquinas' ? '' : `<div class="grid">
     ${card('Sistema', gs(o.sis))}${card('Centro Financiero', gs(o.cf))}${card('Diferencia', `<span class="${o.estado==='ok'?'ok':o.d<0?'bad':'war'}">${gsDif(o.d)}</span>`)}</div>
     ${o.corrida ? `<div class="banner w">Probable carga con fecha corrida: se compensa con el día ${o.corrida.split('-').reverse().join('/')}.</div>` : ''}`;
-  $('#dlgBody').innerHTML = resumen + '<h2 style="margin-top:4px">Movimientos en CF</h2><div id="dlgTx" class="muted">Cargando…</div>' + `
+  $('#dlgBody').innerHTML = resumen + (o.negocio !== 'maquinas' ? '<button class="pri" id="btnEnviarCF" style="margin-bottom:10px">📤 Enviar cierre al Centro Financiero</button><div id="envBox"></div>' : '') + '<h2 style="margin-top:4px">Movimientos en CF</h2><div id="dlgTx" class="muted">Cargando…</div>' + `
     <h2>Revisión</h2>
     <textarea id="nTxt" rows="2" style="width:100%" placeholder="Nota (qué se corrigió, por qué)">${esc(nota.nota||'')}</textarea>
     <label style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="nOk" ${nota.ok?'checked':''}> Revisado / corregido</label>
     <button class="pri" id="nSave">Guardar nota</button>`;
   $('#dlg').showModal();
+  if ($('#btnEnviarCF')) $('#btnEnviarCF').onclick = () => prepEnvio(o);
   $('#nSave').onclick = async () => {
     const t = $('#nTxt').value.trim(), ok = $('#nOk').checked;
     if (!t && !ok) delete st.notas[key]; else st.notas[key] = { nota:t, ok, ts:new Date().toISOString() };
@@ -502,6 +503,31 @@ async function openDay(key){
   box.innerHTML = `<div class="tw"><table><thead><tr><th>Hora</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Concepto</th><th>Monto</th></tr></thead><tbody>
     ${data.map(x => `<tr><td>${esc((x.fecha||'').slice(11,16))}</td><td class="l">${esc(x.cuenta)}</td><td class="l">${esc(x.descripcion || x.categoria)}</td><td>${gs(x.monto)}</td></tr>`).join('')}
     </tbody><tfoot><tr><td></td><td></td><td class="l">Total</td><td>${gs(data.reduce((s,x)=>s+n0(x.monto),0))}</td></tr></tfoot></table></div>`;
+}
+
+/* ---------- enviar cierre al Centro Financiero ---------- */
+async function prepEnvio(o){
+  const box = $('#envBox'); box.innerHTML = '<span class="spin"></span>';
+  const { data, error } = await sb.rpc('conc_cierre_dia', { p_dia: o.dia, p_negocio: o.negocio });
+  if (error){ box.innerHTML = `<span class="bad">${esc(error.message)}</span>`; return; }
+  const r = (data && data[0]) || {}, bod = o.negocio === 'bodega';
+  const v = { cash:n0(r.efectivo), card: bod ? 0 : n0(r.pos), transfer:n0(r.transferencia), credit:n0(r.fiado), pos: bod ? n0(r.pos) + n0(r.qr) : 0 };
+  const f = (k,l) => `<label>${l}<input data-env="${k}" inputmode="numeric" value="${Math.round(v[k]) || ''}"></label>`;
+  box.innerHTML = `${r.cerrado ? '' : '<div class="banner w">El día no figura cerrado en el sistema: los montos pueden estar incompletos.</div>'}
+    <div class="form">${f('cash','Efectivo')}${f('card','Tarjeta acreditada en Ueno')}${f('transfer','Transferencias')}${f('credit','Fiado')}${bod ? f('pos','POS Bancard (débito + crédito + QR)') : ''}</div>
+    ${bod ? '<div class="note">Tarjeta acreditada queda en 0: lo no acreditado queda pendiente en Control Bancard del CF.</div>' : ''}
+    <div class="actions" style="margin-top:10px"><button class="pri" id="btnEnvOk">Confirmar envío</button></div>`;
+  $('#btnEnvOk').onclick = async () => {
+    const it = { id:o.negocio + '|' + o.dia, negocio:o.negocio, dia:o.dia, origen:'conciliacion', sent_at:new Date().toISOString() };
+    box.querySelectorAll('[data-env]').forEach(i => it[i.dataset.env] = Number(String(i.value).replace(/[^\d-]/g,'')) || 0);
+    $('#btnEnvOk').disabled = true;
+    const { data:cur, error:e1 } = await sb.from('cf_app_state').select('data').eq('id','inbox').maybeSingle();
+    if (e1){ alert(e1.message); $('#btnEnvOk').disabled = false; return; }
+    const items = ((cur && cur.data && cur.data.items) || []).filter(x => x.id !== it.id); items.push(it);
+    const { error:e2 } = await sb.from('cf_app_state').upsert({ id:'inbox', data:{ items }, updated_at:new Date().toISOString() });
+    if (e2){ alert(e2.message); $('#btnEnvOk').disabled = false; return; }
+    box.innerHTML = '<div class="banner w">Enviado. En el Centro Financiero → Cierres rápidos → Pendientes de Conciliación, tocá "Cargar", revisá y guardá.</div>';
+  };
 }
 
 /* ---------- export ---------- */
