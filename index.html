@@ -270,14 +270,14 @@ function compute(){
   const by = {bodega:[], asaditos:[], maquinas:[]};
   for (const r of st.rows){
     const o = {...r};
-    o.sis = r.negocio === 'maquinas' ? null : n0(r.sis_ef) + n0(r.sis_banco);
+    // asaditos: consumo de Chompi/Mirna se descuenta del sueldo → entra como efectivo (sistema y envío al CF)
+    if (r.negocio === 'asaditos') o.sis_ef = n0(r.sis_ef) + n0(r.cons_emp);
+    o.sis = r.negocio === 'maquinas' ? null : n0(o.sis_ef) + n0(r.sis_banco);
     const bod = r.negocio === 'bodega';
     o.cf_banco_tot = n0(r.cf_banco) + (bod ? n0(r.cf_dif) : 0);   // bodega: acreditado + diferencia Bancard
     o.cf = n0(r.cf_ef) + o.cf_banco_tot + (r.negocio === 'maquinas' ? n0(r.cf_dif) : 0);
     o.mis = n0(r.cf_ef) + n0(r.cf_banco);
-    // asaditos: consumo de Chompi/Mirna se descuenta del sueldo → cuenta como cobrado (en sistema y en CF)
-    if (r.negocio === 'asaditos'){ o.sis += n0(r.cons_emp); o.cf += n0(r.cons_emp); }
-    o.d_ef = n0(r.cf_ef) - n0(r.sis_ef);
+    o.d_ef = n0(r.cf_ef) - n0(o.sis_ef);
     o.d_banco = o.cf_banco_tot - n0(r.sis_banco);
     o.d = r.negocio === 'maquinas' ? 0 : (bod ? o.d_ef : o.cf - o.sis);   // bodega: estado solo por efectivo
     o.key = r.negocio + '|' + r.dia;
@@ -350,7 +350,7 @@ function renderResumen(C){
   <h2>Ingresos Centro Financiero</h2>
   <div class="grid">
     ${card('Bodega', gs(bod.cf))}
-    ${card('Asaditos (ef + tarjeta + transf + consumo Chompi/Mirna ' + gs(asa.cons_emp) + ')', gs(asa.cf))}
+    ${card('Asaditos (ef + tarjeta + transf)', gs(asa.cf))}
     ${card('Asaditos PYa / Monchis', gs(asa.cf_dif))}
     ${card('Máquinas (mis ' + gs(maq.mis) + ' + otras ' + gs(maq.otras) + ')', gs(maq.cf))}
     ${card('Total ingresos CF', gs(C.ingTotal), 'total')}
@@ -371,7 +371,7 @@ function renderResumen(C){
     </tbody>
     <tfoot><tr><td>Total</td><td></td><td></td><td></td><td class="${C.total<0?'bad':''}">${gs(C.total)}</td></tr></tfoot>
   </table></div>
-  ${asa.cons_emp || asa.cons_ju ? `<div class="note">Asaditos: consumo Chompi/Mirna ${gs(asa.cons_emp)} incluido como ingreso (descuento de sueldo). Consumo Julio ${gs(asa.cons_ju)} excluido de ingresos y ganancia.</div>` : ''}
+  ${asa.cons_emp || asa.cons_ju ? `<div class="note">Asaditos: consumo Chompi/Mirna ${gs(asa.cons_emp)} sumado al efectivo del sistema (descuento de sueldo). Consumo Julio ${gs(asa.cons_ju)} excluido de ingresos y ganancia.</div>` : ''}
   ${asa.dias_est ? `<div class="note">Días de asaditos sin productos cargados: ganancia estimada = entrada real × ${(asa.pct*100).toFixed(1)}% (promedio de los días completos del período).</div>` : ''}
 
   <h2>Control Sistema vs Centro Financiero</h2>
@@ -515,10 +515,12 @@ async function prepEnvio(o){
   const { data, error } = await sb.rpc('conc_cierre_dia', { p_dia: o.dia, p_negocio: o.negocio });
   if (error){ box.innerHTML = `<span class="bad">${esc(error.message)}</span>`; return; }
   const r = (data && data[0]) || {}, bod = o.negocio === 'bodega';
-  const v = { cash:n0(r.efectivo), card: bod ? 0 : n0(r.pos), transfer:n0(r.transferencia), credit:n0(r.fiado), pos: bod ? n0(r.pos) + n0(r.qr) : 0 };
+  const cons = bod ? 0 : n0(o.cons_emp);
+  const v = { cash:n0(r.efectivo) + cons, card: bod ? 0 : n0(r.pos), transfer:n0(r.transferencia), credit:n0(r.fiado), pos: bod ? n0(r.pos) + n0(r.qr) : 0 };
   const f = (k,l) => `<label>${l}<input data-env="${k}" inputmode="numeric" value="${Math.round(v[k]) || ''}"></label>`;
   box.innerHTML = `${r.cerrado ? '' : '<div class="banner w">El día no figura cerrado en el sistema: los montos pueden estar incompletos.</div>'}
     <div class="form">${f('cash','Efectivo')}${f('card','Tarjeta acreditada en Ueno')}${f('transfer','Transferencias')}${f('credit','Fiado')}${bod ? f('pos','POS Bancard (débito + crédito + QR)') : ''}</div>
+    ${cons ? `<div class="note">Efectivo incluye consumo Chompi/Mirna ${gs(cons)} (descuento de sueldo).</div>` : ''}
     ${bod ? '<div class="note">Tarjeta acreditada queda en 0: lo no acreditado queda pendiente en Control Bancard del CF.</div>' : ''}
     <div class="actions" style="margin-top:10px"><button class="pri" id="btnEnvOk">Confirmar envío</button></div>`;
   $('#btnEnvOk').onclick = async () => {
