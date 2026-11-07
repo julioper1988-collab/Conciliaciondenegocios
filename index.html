@@ -265,13 +265,14 @@ async function load(){
 function readCache(){ try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch(e){ return null; } }
 
 /* ---------- cálculo ---------- */
+const CONS_DESDE = '2026-11-07';   // desde acá el consumo Chompi/Mirna entra como efectivo (días previos ya cuadrados en el CF)
 function compute(){
   const tol = n0(st.params.tolerancia);
   const by = {bodega:[], asaditos:[], maquinas:[]};
   for (const r of st.rows){
     const o = {...r};
     // asaditos: consumo de Chompi/Mirna se descuenta del sueldo → entra como efectivo (sistema y envío al CF)
-    if (r.negocio === 'asaditos') o.sis_ef = n0(r.sis_ef) + n0(r.cons_emp);
+    if (r.negocio === 'asaditos' && r.dia >= CONS_DESDE) o.sis_ef = n0(r.sis_ef) + n0(r.cons_emp);
     o.sis = r.negocio === 'maquinas' ? null : n0(o.sis_ef) + n0(r.sis_banco);
     const bod = r.negocio === 'bodega';
     o.cf_banco_tot = n0(r.cf_banco) + (bod ? n0(r.cf_dif) : 0);   // bodega: acreditado + diferencia Bancard
@@ -515,7 +516,7 @@ async function prepEnvio(o){
   const { data, error } = await sb.rpc('conc_cierre_dia', { p_dia: o.dia, p_negocio: o.negocio });
   if (error){ box.innerHTML = `<span class="bad">${esc(error.message)}</span>`; return; }
   const r = (data && data[0]) || {}, bod = o.negocio === 'bodega';
-  const cons = bod ? 0 : n0(o.cons_emp);
+  const cons = bod || o.dia < CONS_DESDE ? 0 : n0(o.cons_emp);
   const v = { cash:n0(r.efectivo) + cons, card: bod ? 0 : n0(r.pos), transfer:n0(r.transferencia), credit:n0(r.fiado), pos: bod ? n0(r.pos) + n0(r.qr) : 0 };
   const f = (k,l) => `<label>${l}<input data-env="${k}" inputmode="numeric" value="${Math.round(v[k]) || ''}"></label>`;
   box.innerHTML = `${r.cerrado ? '' : '<div class="banner w">El día no figura cerrado en el sistema: los montos pueden estar incompletos.</div>'}
