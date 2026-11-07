@@ -275,6 +275,8 @@ function compute(){
     o.cf_banco_tot = n0(r.cf_banco) + (bod ? n0(r.cf_dif) : 0);   // bodega: acreditado + diferencia Bancard
     o.cf = n0(r.cf_ef) + o.cf_banco_tot + (r.negocio === 'maquinas' ? n0(r.cf_dif) : 0);
     o.mis = n0(r.cf_ef) + n0(r.cf_banco);
+    // asaditos: consumo de Chompi/Mirna se descuenta del sueldo → cuenta como cobrado (en sistema y en CF)
+    if (r.negocio === 'asaditos'){ o.sis += n0(r.cons_emp); o.cf += n0(r.cons_emp); }
     o.d_ef = n0(r.cf_ef) - n0(r.sis_ef);
     o.d_banco = o.cf_banco_tot - n0(r.sis_banco);
     o.d = r.negocio === 'maquinas' ? 0 : (bod ? o.d_ef : o.cf - o.sis);   // bodega: estado solo por efectivo
@@ -310,7 +312,8 @@ function compute(){
     sis_ef: sum(by.asaditos,'sis_ef'), sis_banco: sum(by.asaditos,'sis_banco'), cf_ef: sum(by.asaditos,'cf_ef'), cf_banco: sum(by.asaditos,'cf_banco'),
     sis_dif: sum(by.asaditos,'sis_dif'), cf_dif: sum(by.asaditos,'cf_dif'),
     gan_real: sum(by.asaditos.filter(o=>!o.gan_est),'gan_final'), gan_est: sum(by.asaditos.filter(o=>o.gan_est),'gan_final'),
-    dias_est: by.asaditos.filter(o=>o.gan_est).length, pct };
+    dias_est: by.asaditos.filter(o=>o.gan_est).length, pct,
+    cons_emp: sum(by.asaditos,'cons_emp'), cons_ju: sum(by.asaditos,'cons_ju') };
   asa.gan = asa.gan_real + asa.gan_est; asa.personal = (n0(P.mirna) + n0(P.german)) * asa.dias; asa.res = asa.gan - asa.personal;
   const maq = { cf: sum(by.maquinas,'cf'), mis: sum(by.maquinas,'mis'), otras: sum(by.maquinas,'cf_dif'), dias: by.maquinas.length }; maq.res = maq.cf;
   const corregir = [...by.bodega, ...by.asaditos].filter(o => o.estado !== 'ok').sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
@@ -347,7 +350,7 @@ function renderResumen(C){
   <h2>Ingresos Centro Financiero</h2>
   <div class="grid">
     ${card('Bodega', gs(bod.cf))}
-    ${card('Asaditos (ef + tarjeta + transf)', gs(asa.cf))}
+    ${card('Asaditos (ef + tarjeta + transf + consumo Chompi/Mirna ' + gs(asa.cons_emp) + ')', gs(asa.cf))}
     ${card('Asaditos PYa / Monchis', gs(asa.cf_dif))}
     ${card('Máquinas (mis ' + gs(maq.mis) + ' + otras ' + gs(maq.otras) + ')', gs(maq.cf))}
     ${card('Total ingresos CF', gs(C.ingTotal), 'total')}
@@ -368,6 +371,7 @@ function renderResumen(C){
     </tbody>
     <tfoot><tr><td>Total</td><td></td><td></td><td></td><td class="${C.total<0?'bad':''}">${gs(C.total)}</td></tr></tfoot>
   </table></div>
+  ${asa.cons_emp || asa.cons_ju ? `<div class="note">Asaditos: consumo Chompi/Mirna ${gs(asa.cons_emp)} incluido como ingreso (descuento de sueldo). Consumo Julio ${gs(asa.cons_ju)} excluido de ingresos y ganancia.</div>` : ''}
   ${asa.dias_est ? `<div class="note">Días de asaditos sin productos cargados: ganancia estimada = entrada real × ${(asa.pct*100).toFixed(1)}% (promedio de los días completos del período).</div>` : ''}
 
   <h2>Control Sistema vs Centro Financiero</h2>
